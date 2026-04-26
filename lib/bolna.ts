@@ -1,7 +1,7 @@
 import type { Lead } from '@/lib/types'
 
 export async function triggerCall(lead: Lead): Promise<string> {
-  const response = await fetch('https://api.bolna.dev/v2/call', {
+  const response = await fetch('https://api.bolna.ai/call', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -10,7 +10,7 @@ export async function triggerCall(lead: Lead): Promise<string> {
     body: JSON.stringify({
       agent_id: process.env.BOLNA_AGENT_ID,
       recipient_phone_number: lead.phone,
-      variables: {
+      user_data: {
         first_name: lead.first_name,
         salutation: lead.salutation,
         source: lead.source,
