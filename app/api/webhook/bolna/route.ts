@@ -41,8 +41,10 @@ export async function POST(req: NextRequest) {
     }
 
     const callId =
+      (body.execution_id as string | undefined) ||
       (body.call_id as string | undefined) ||
       (body.id as string | undefined) ||
+      ((body.data as Record<string, unknown> | undefined)?.execution_id as string | undefined) ||
       ((body.data as Record<string, unknown> | undefined)?.call_id as string | undefined)
 
     if (!callId) {

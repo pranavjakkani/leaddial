@@ -25,5 +25,6 @@ export async function triggerCall(lead: Lead): Promise<string> {
   }
 
   const data = await response.json()
-  return data.call_id
+  console.log('Bolna trigger response:', JSON.stringify(data))
+  return data.execution_id
 }
