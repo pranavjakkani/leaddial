@@ -23,7 +23,14 @@
 # misc
 .DS_Store
 *.pem
-claude.md
+# Add these lines to your existing .gitignore
+
+# Claude Code context files — build instructions, not source code
+CLAUDE.md
+lib/CLAUDE.md
+app/api/CLAUDE.md
+components/CLAUDE.md
+claude-code-command.md
 
 # debug
 npm-debug.log*
