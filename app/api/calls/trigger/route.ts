@@ -24,14 +24,25 @@ export async function POST(req: NextRequest) {
 
     const callId = await triggerCall(lead)
 
+    const { error: insertError } = await supabase
+      .from('calls')
+      .insert({
+        lead_id: leadId,
+        execution_id: callId,
+        status: 'calling',
+        called_at: new Date().toISOString(),
+      })
+
+    if (insertError) throw insertError
+
     const { error: updateError } = await supabase
       .from('leads')
-      .update({ bolna_call_id: callId, status: 'calling' })
+      .update({ status: 'calling' })
       .eq('id', leadId)
 
     if (updateError) throw updateError
 
-    return NextResponse.json({ success: true, call_id: callId })
+    return NextResponse.json({ success: true, execution_id: callId })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })
