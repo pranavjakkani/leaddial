@@ -43,6 +43,174 @@ function PhoneIcon() {
   )
 }
 
+interface TranscriptLine {
+  role: 'assistant' | 'user' | 'system'
+  text: string
+}
+
+function parseTranscript(summary: string | null): TranscriptLine[] {
+  if (!summary || summary.trim() === '') return []
+  return summary
+    .split('\n')
+    .map((line) => {
+      const lower = line.toLowerCase()
+      if (lower.startsWith('assistant:')) {
+        return { role: 'assistant' as const, text: line.slice('assistant:'.length).trim() }
+      }
+      if (lower.startsWith('user:')) {
+        return { role: 'user' as const, text: line.slice('user:'.length).trim() }
+      }
+      return { role: 'system' as const, text: line.trim() }
+    })
+    .filter((l) => l.text.length > 0)
+}
+
+function DetailPanel({ lead }: { lead: Lead }) {
+  const [activeTab, setActiveTab] = useState<'transcript' | 'details'>('transcript')
+  const transcriptLines = parseTranscript(lead.call_summary)
+
+  const detailFields: { label: string; value: string | number | null }[] = [
+    { label: 'Name', value: lead.first_name },
+    { label: 'Phone', value: lead.phone },
+    { label: 'Salutation', value: lead.salutation },
+    { label: 'Source', value: lead.source },
+    { label: 'BHK Type', value: lead.bhk_type },
+    { label: 'Status', value: lead.status.replace(/_/g, ' ') },
+    { label: 'Possession Preference', value: lead.possession_preference },
+    { label: 'Confirmed BHK', value: lead.confirmed_bhk },
+    { label: 'Budget Range', value: lead.budget_range },
+    { label: 'Visit Slot', value: lead.visit_slot },
+    { label: 'Call Outcome', value: lead.call_outcome },
+    { label: 'Lead Score', value: lead.lead_score },
+  ]
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 px-6 py-5 shrink-0">
+        <div className="flex items-start gap-4">
+          {/* Avatar */}
+          <div className="w-14 h-14 rounded-full bg-[#003441] text-white flex items-center justify-center text-xl font-bold shrink-0">
+            {getInitials(lead.first_name)}
+          </div>
+          {/* Name + status */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold text-[#003441]">{lead.first_name}</h2>
+              <StatusBadge status={lead.status} />
+            </div>
+            <p className="text-sm text-slate-500 mt-0.5">{lead.phone}</p>
+          </div>
+        </div>
+
+        {/* Chips row */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
+            {lead.bhk_type}
+          </span>
+          <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
+            {lead.source}
+          </span>
+          {lead.lead_score !== null && (
+            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
+              Score: {lead.lead_score}
+            </span>
+          )}
+          {lead.visit_slot && (
+            <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full">
+              {lead.visit_slot}
+            </span>
+          )}
+        </div>
+
+        {/* Call ID */}
+        {lead.bolna_call_id && (
+          <p className="mt-3 text-[11px] font-mono text-slate-400">
+            Call ID: {lead.bolna_call_id}
+          </p>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-slate-200 bg-white shrink-0">
+        <div className="flex px-6">
+          {(['transcript', 'details'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`py-3 px-1 mr-6 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                activeTab === tab
+                  ? 'border-orange-500 text-[#003441] font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-[#003441]'
+              }`}
+            >
+              {tab === 'transcript' ? 'Transcript' : 'Lead Details'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content (scrollable) */}
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'transcript' ? (
+          <div className="px-6 py-5 space-y-3">
+            {transcriptLines.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-12">No transcript available.</p>
+            ) : (
+              transcriptLines.map((line, i) => {
+                if (line.role === 'system') {
+                  return (
+                    <p key={i} className="text-sm text-slate-500 text-center italic py-1">
+                      {line.text}
+                    </p>
+                  )
+                }
+                if (line.role === 'assistant') {
+                  return (
+                    <div key={i} className="flex justify-end">
+                      <div className="bg-[#003441] text-white text-sm px-4 py-2.5 rounded-2xl rounded-br-sm max-w-[75%]">
+                        {line.text}
+                      </div>
+                    </div>
+                  )
+                }
+                // user
+                return (
+                  <div key={i} className="flex justify-start">
+                    <div className="bg-slate-100 text-[#003441] text-sm px-4 py-2.5 rounded-2xl rounded-bl-sm max-w-[75%]">
+                      {line.text}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        ) : (
+          <div className="px-6 py-5">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+              {detailFields.map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-0.5">
+                    {label}
+                  </p>
+                  <p className="text-sm text-[#003441] font-medium">
+                    {value !== null && value !== undefined && value !== '' ? String(value) : '—'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer — AI Next Steps */}
+      <div className="bg-orange-50 border-t border-orange-200 px-6 py-3 text-sm text-orange-700 font-medium shrink-0">
+        AI suggests: Follow up in 2 days · Confirm visit slot · Send property brochure
+      </div>
+    </div>
+  )
+}
+
 export default function CallHistoryPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -76,6 +244,8 @@ export default function CallHistoryPage() {
   const callLeads = leads
     .filter((l) => l.bolna_call_id !== null)
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+
+  const selectedLead = callLeads.find((l) => l.id === selectedId) ?? null
 
   // Stats
   const totalCalls = callLeads.length
@@ -179,12 +349,16 @@ export default function CallHistoryPage() {
         </div>
       </div>
 
-      {/* ── Right column: empty state ─────────────────────────────────────── */}
+      {/* ── Right column ─────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-          <PhoneIcon />
-          <p className="text-base font-medium">Select a call to view details</p>
-        </div>
+        {selectedLead ? (
+          <DetailPanel key={selectedLead.id} lead={selectedLead} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+            <PhoneIcon />
+            <p className="text-base font-medium">Select a call to view details</p>
+          </div>
+        )}
       </div>
     </div>
   )
