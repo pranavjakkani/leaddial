@@ -5,8 +5,9 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function sendVisitConfirmedEmail(lead: Lead): Promise<void> {
   try {
-    await resend.emails.send({
-      from: 'LeadDial <noreply@leaddial.dev>',
+    console.log('[resend] sending to:', process.env.SITE_MANAGER_EMAIL, 'for lead:', lead.first_name)
+    const result = await resend.emails.send({
+      from: 'LeadDial <onboarding@resend.dev>',
       to: process.env.SITE_MANAGER_EMAIL!,
       subject: `Site Visit Confirmed — ${lead.first_name}`,
       html: `
@@ -24,7 +25,8 @@ export async function sendVisitConfirmedEmail(lead: Lead): Promise<void> {
         </div>
       `,
     })
+    console.log('[resend] result:', JSON.stringify(result))
   } catch (err) {
-    console.error('Failed to send visit confirmed email:', err)
+    console.error('[resend] Failed to send visit confirmed email:', err)
   }
 }
