@@ -1,14 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { LeadRow } from '@/components/LeadRow'
-import { SummaryModal } from '@/components/SummaryModal'
 import type { Lead } from '@/lib/types'
 
-const HEADERS = ['Name / Phone', 'Salutation', 'Source', 'BHK', 'Status', 'Score', 'Summary', 'Actions']
+const HEADERS = ['Name / Phone', 'Salutation', 'Source', 'BHK', 'Status', 'Score', 'Actions']
 
 function SkeletonRow() {
-  const widths = ['w-28', 'w-12', 'w-20', 'w-12', 'w-20', 'w-8', 'w-32', 'w-16']
+  const widths = ['w-28', 'w-12', 'w-20', 'w-12', 'w-20', 'w-8', 'w-16']
   return (
     <tr className="border-b border-[#E2E8F0]">
       {widths.map((w, i) => (
@@ -34,65 +32,48 @@ export function LeadTable({
   leads,
   onCall,
   onDelete,
-  onLeadUpdated,
   callingIds,
   flashingIds,
   isLoading,
 }: LeadTableProps) {
-  const [summaryLead, setSummaryLead] = useState<Lead | null>(null)
-
   return (
-    <>
-      <div className="overflow-x-auto rounded-lg border border-[#E2E8F0]">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-[#F8FAFC] sticky top-0">
-              {HEADERS.map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wide border-b border-[#E2E8F0] whitespace-nowrap"
-                >
-                  {h}
-                </th>
-              ))}
+    <div className="overflow-x-auto rounded-lg border border-[#E2E8F0]">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-[#F8FAFC] sticky top-0">
+            {HEADERS.map((h) => (
+              <th
+                key={h}
+                className="px-4 py-3 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wide border-b border-[#E2E8F0] whitespace-nowrap"
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+          ) : leads.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-4 py-12 text-center text-sm text-[#64748B]">
+                No leads yet. Add your first lead above.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-            ) : leads.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-[#64748B]">
-                  No leads yet. Add your first lead above.
-                </td>
-              </tr>
-            ) : (
-              leads.map((lead) => (
-                <LeadRow
-                  key={lead.id}
-                  lead={lead}
-                  onCall={onCall}
-                  onDelete={onDelete}
-                  onSummaryClick={setSummaryLead}
-                  isFlashing={flashingIds.has(lead.id)}
-                  isCalling={callingIds.has(lead.id)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {summaryLead && (
-        <SummaryModal
-          lead={summaryLead}
-          onClose={() => setSummaryLead(null)}
-          onSaved={(leadId, newSummary) => {
-            onLeadUpdated(leadId, { call_summary: newSummary })
-            setSummaryLead(null)
-          }}
-        />
-      )}
-    </>
+          ) : (
+            leads.map((lead) => (
+              <LeadRow
+                key={lead.id}
+                lead={lead}
+                onCall={onCall}
+                onDelete={onDelete}
+                isFlashing={flashingIds.has(lead.id)}
+                isCalling={callingIds.has(lead.id)}
+              />
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }

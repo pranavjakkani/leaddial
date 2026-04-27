@@ -333,12 +333,6 @@ export default function LeadInventoryPage() {
                 const isFlashing = flashingIds.has(lead.id)
                 const sourceColors = getSourceColors(lead.source)
                 const sourceInitial = lead.source.charAt(0).toUpperCase()
-                const truncatedSummary = lead.call_summary
-                  ? lead.call_summary.length > 40
-                    ? lead.call_summary.slice(0, 40) + '…'
-                    : lead.call_summary
-                  : null
-
                 return (
                   <tr
                     key={lead.id}
