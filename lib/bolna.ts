@@ -6,6 +6,7 @@ export interface BolnaExecution {
   transcript: string | null
   extracted_data: Record<string, unknown> | null
   conversation_duration: number | null
+  recording_url: string | null
 }
 
 export interface PropertyKnowledgeInput {
