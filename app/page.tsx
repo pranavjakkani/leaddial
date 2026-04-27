@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddLeadModal } from '@/components/AddLeadModal'
 import { IconDots } from '@/components/IconDots'
 import { StatusBadge } from '@/components/StatusBadge'
-import { SummaryModal } from '@/components/SummaryModal'
 import type { Lead } from '@/lib/types'
 
 const POLL_INTERVAL = 10_000 // 10 seconds
@@ -60,7 +59,7 @@ export default function DashboardPage() {
   const [, setCallingIds] = useState<Set<string>>(new Set())
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set())
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [summaryLead, setSummaryLead] = useState<Lead | null>(null)
+  const [callsCount, setCallsCount] = useState(0)
   const toastCounter = useRef(0)
   const prevLeadsRef = useRef<Record<string, Lead>>({})
 
@@ -112,6 +111,19 @@ export default function DashboardPage() {
     return () => clearInterval(timer)
   }, [fetchLeads])
 
+  // Calls count from calls table
+  useEffect(() => {
+    function fetchCallsCount() {
+      fetch('/api/call-history')
+        .then((r) => r.json())
+        .then((data: unknown) => setCallsCount(Array.isArray(data) ? data.length : 0))
+        .catch(() => {})
+    }
+    fetchCallsCount()
+    const timer = setInterval(fetchCallsCount, POLL_INTERVAL)
+    return () => clearInterval(timer)
+  }, [])
+
   async function handleCall(leadId: string) {
     setCallingIds((s) => new Set([...s, leadId]))
     // Optimistic status update
@@ -149,15 +161,6 @@ export default function DashboardPage() {
   }
 
 
-  function handleLeadUpdated(leadId: string, patch: Partial<Lead>) {
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)))
-    prevLeadsRef.current = Object.fromEntries(
-      Object.entries(prevLeadsRef.current).map(([k, v]) =>
-        k === leadId ? [k, { ...v, ...patch }] : [k, v]
-      )
-    )
-  }
-
   function handleLeadAdded(lead: Lead) {
     setLeads((prev) => [lead, ...prev])
     prevLeadsRef.current[lead.id] = lead
@@ -165,7 +168,6 @@ export default function DashboardPage() {
   }
 
   // Derived counts
-  const calledCount = leads.filter((l) => l.bolna_call_id !== null).length
   const visitConfirmedCount = leads.filter((l) => l.status === 'visit_confirmed').length
 
   return (
@@ -202,7 +204,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Calls Made</p>
-            <p className="text-[36px] font-bold text-primary leading-tight">{calledCount}</p>
+            <p className="text-[36px] font-bold text-primary leading-tight">{callsCount}</p>
           </div>
         </div>
 
@@ -230,7 +232,7 @@ export default function DashboardPage() {
             <span className="text-2xl font-semibold">Running</span>
           </div>
           <p className="text-xs text-on-primary-container mt-4">
-            AI has screened {calledCount} lead{calledCount !== 1 ? 's' : ''} today.
+            AI has screened {callsCount} lead{callsCount !== 1 ? 's' : ''} today.
           </p>
         </div>
       </div>
@@ -262,11 +264,6 @@ export default function DashboardPage() {
               {hotLeads.map((lead) => {
                 const isFlashing = flashingIds.has(lead.id)
                 const initials = lead.first_name.slice(0, 2).toUpperCase()
-                const summary = lead.call_summary
-                  ? lead.call_summary.length > 80
-                    ? lead.call_summary.slice(0, 80) + '…'
-                    : lead.call_summary
-                  : null
 
                 return (
                   <li
@@ -325,17 +322,6 @@ export default function DashboardPage() {
         <AddLeadModal
           onClose={() => setShowAddModal(false)}
           onAdd={handleLeadAdded}
-        />
-      )}
-
-      {summaryLead && (
-        <SummaryModal
-          lead={summaryLead}
-          onClose={() => setSummaryLead(null)}
-          onSaved={(leadId, newSummary) => {
-            handleLeadUpdated(leadId, { call_summary: newSummary })
-            setSummaryLead(null)
-          }}
         />
       )}
 

@@ -6,7 +6,8 @@ export interface BolnaExecution {
   transcript: string | null
   extracted_data: Record<string, unknown> | null
   conversation_duration: number | null
-  recording_url: string | null
+  recording_url: string | null // always null at top level; real value is in telephony_data
+  telephony_data: { recording_url?: string } | null
 }
 
 export interface PropertyKnowledgeInput {
@@ -191,6 +192,7 @@ export async function getExecution(executionId: string): Promise<BolnaExecution>
 }
 
 export async function triggerCall(lead: Lead): Promise<string> {
+  console.log('Triggering Bolna call for lead:', lead);
   const response = await fetch('https://api.bolna.ai/call', {
     method: 'POST',
     headers: {

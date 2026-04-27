@@ -2,9 +2,36 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBadge } from '@/components/StatusBadge'
-import type { Lead } from '@/lib/types'
 
 const POLL_INTERVAL = 10_000
+
+// Local type — CallWithLead (mirrors /api/call-history response shape)
+interface CallWithLead {
+  id: string
+  lead_id: string
+  execution_id: string | null
+  summary: string | null
+  recording_url: string | null
+  call_outcome: string | null
+  status: string
+  called_at: string
+  created_at: string
+  lead: {
+    id: string
+    first_name: string
+    phone: string
+    salutation: string
+    source: string
+    bhk_type: string
+    status: string
+    lead_score: number | null
+    possession_preference: string | null
+    confirmed_bhk: string | null
+    budget_range: string | null
+    visit_slot: string | null
+    call_outcome: string | null
+  }
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -141,23 +168,23 @@ function AudioPlayer({ url }: { url: string }) {
   )
 }
 
-function DetailPanel({ lead }: { lead: Lead }) {
+function DetailPanel({ call }: { call: CallWithLead }) {
   const [activeTab, setActiveTab] = useState<'transcript' | 'details' | 'recording'>('transcript')
-  const transcriptLines = parseTranscript(lead.call_summary)
+  const transcriptLines = parseTranscript(call.summary)
 
   const detailFields: { label: string; value: string | number | null }[] = [
-    { label: 'Name', value: lead.first_name },
-    { label: 'Phone', value: lead.phone },
-    { label: 'Salutation', value: lead.salutation },
-    { label: 'Source', value: lead.source },
-    { label: 'BHK Type', value: lead.bhk_type },
-    { label: 'Status', value: lead.status.replace(/_/g, ' ') },
-    { label: 'Possession Preference', value: lead.possession_preference },
-    { label: 'Confirmed BHK', value: lead.confirmed_bhk },
-    { label: 'Budget Range', value: lead.budget_range },
-    { label: 'Visit Slot', value: lead.visit_slot },
-    { label: 'Call Outcome', value: lead.call_outcome },
-    { label: 'Lead Score', value: lead.lead_score },
+    { label: 'Name', value: call.lead.first_name },
+    { label: 'Phone', value: call.lead.phone },
+    { label: 'Salutation', value: call.lead.salutation },
+    { label: 'Source', value: call.lead.source },
+    { label: 'BHK Type', value: call.lead.bhk_type },
+    { label: 'Status', value: call.lead.status.replace(/_/g, ' ') },
+    { label: 'Possession Preference', value: call.lead.possession_preference },
+    { label: 'Confirmed BHK', value: call.lead.confirmed_bhk },
+    { label: 'Budget Range', value: call.lead.budget_range },
+    { label: 'Visit Slot', value: call.lead.visit_slot },
+    { label: 'Call Outcome', value: call.lead.call_outcome },
+    { label: 'Lead Score', value: call.lead.lead_score },
   ]
 
   return (
@@ -167,42 +194,42 @@ function DetailPanel({ lead }: { lead: Lead }) {
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div className="w-14 h-14 rounded-full bg-[#003441] text-white flex items-center justify-center text-xl font-bold shrink-0">
-            {getInitials(lead.first_name)}
+            {getInitials(call.lead.first_name)}
           </div>
           {/* Name + status */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl font-bold text-[#003441]">{lead.first_name}</h2>
-              <StatusBadge status={lead.status} />
+              <h2 className="text-xl font-bold text-[#003441]">{call.lead.first_name}</h2>
+              <StatusBadge status={call.status as import('@/lib/types').LeadStatus} />
             </div>
-            <p className="text-sm text-slate-500 mt-0.5">{lead.phone}</p>
+            <p className="text-sm text-slate-500 mt-0.5">{call.lead.phone}</p>
           </div>
         </div>
 
         {/* Chips row */}
         <div className="flex flex-wrap gap-2 mt-4">
           <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
-            {lead.bhk_type}
+            {call.lead.bhk_type}
           </span>
           <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
-            {lead.source}
+            {call.lead.source}
           </span>
-          {lead.lead_score !== null && (
+          {call.lead.lead_score !== null && (
             <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
-              Score: {lead.lead_score}
+              Score: {call.lead.lead_score}
             </span>
           )}
-          {lead.visit_slot && (
+          {call.lead.visit_slot && (
             <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full">
-              {lead.visit_slot}
+              {call.lead.visit_slot}
             </span>
           )}
         </div>
 
         {/* Call ID */}
-        {lead.bolna_call_id && (
+        {call.execution_id && (
           <p className="mt-3 text-[11px] font-mono text-slate-400">
-            Call ID: {lead.bolna_call_id}
+            Call ID: {call.execution_id}
           </p>
         )}
       </div>
@@ -278,8 +305,8 @@ function DetailPanel({ lead }: { lead: Lead }) {
           </div>
         ) : (
           <div className="px-6 py-6">
-            {lead.recording_url ? (
-              <AudioPlayer url={lead.recording_url} />
+            {call.recording_url ? (
+              <AudioPlayer url={call.recording_url} />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12">
@@ -302,19 +329,18 @@ function DetailPanel({ lead }: { lead: Lead }) {
 }
 
 export default function CallHistoryPage() {
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [calls, setCalls] = useState<CallWithLead[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchLeads = useCallback(async (silent = false) => {
+  const fetchCalls = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true)
-      await fetch('/api/sync').catch(() => {})
-      const res = await fetch('/api/leads')
+      const res = await fetch('/api/call-history')
       if (!res.ok) throw new Error('Failed to fetch')
-      const data: Lead[] = await res.json()
-      setLeads(data)
+      const data: CallWithLead[] = await res.json()
+      setCalls(data)
     } catch {
       // silent fail on polling
     } finally {
@@ -323,26 +349,21 @@ export default function CallHistoryPage() {
   }, [])
 
   useEffect(() => {
-    fetchLeads()
-    pollingRef.current = setInterval(() => fetchLeads(true), POLL_INTERVAL)
+    fetchCalls()
+    pollingRef.current = setInterval(() => fetchCalls(true), POLL_INTERVAL)
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
     }
-  }, [fetchLeads])
+  }, [fetchCalls])
 
-  // Only leads that have a bolna_call_id, sorted by updated_at descending
-  const callLeads = leads
-    .filter((l) => l.bolna_call_id !== null)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  const selectedCall = calls.find((c) => c.id === selectedId) ?? null
 
-  const selectedLead = callLeads.find((l) => l.id === selectedId) ?? null
-
-  // Stats
-  const totalCalls = callLeads.length
-  const confirmed = callLeads.filter((l) => l.status === 'visit_confirmed').length
-  const notInterested = callLeads.filter((l) => l.status === 'not_interested').length
-  const followUp = callLeads.filter(
-    (l) => l.status === 'follow_up' || l.status === 'callback_requested'
+  // Stats derived from calls array
+  const totalCalls = calls.length
+  const confirmed = calls.filter((c) => c.status === 'visit_confirmed').length
+  const notInterested = calls.filter((c) => c.status === 'not_interested').length
+  const followUp = calls.filter(
+    (c) => c.status === 'follow_up' || c.status === 'callback_requested'
   ).length
 
   const stats = [
@@ -390,7 +411,7 @@ export default function CallHistoryPage() {
                 </div>
               ))}
             </div>
-          ) : callLeads.length === 0 ? (
+          ) : calls.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
               <PhoneIcon />
               <p className="text-sm text-slate-400 font-medium">No calls yet</p>
@@ -400,12 +421,12 @@ export default function CallHistoryPage() {
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {callLeads.map((lead) => {
-                const isSelected = lead.id === selectedId
+              {calls.map((call) => {
+                const isSelected = call.id === selectedId
                 return (
-                  <li key={lead.id}>
+                  <li key={call.id}>
                     <button
-                      onClick={() => setSelectedId(lead.id)}
+                      onClick={() => setSelectedId(call.id)}
                       className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
                         isSelected
                           ? 'bg-orange-50 border-l-4 border-orange-500'
@@ -414,21 +435,21 @@ export default function CallHistoryPage() {
                     >
                       {/* Avatar */}
                       <div className="w-10 h-10 rounded-full bg-[#003441] text-white flex items-center justify-center text-sm font-bold shrink-0">
-                        {getInitials(lead.first_name)}
+                        {getInitials(call.lead.first_name)}
                       </div>
 
                       {/* Name + phone */}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-[#003441] truncate">
-                          {lead.first_name}
+                          {call.lead.first_name}
                         </p>
-                        <p className="text-xs text-slate-500 truncate">{lead.phone}</p>
+                        <p className="text-xs text-slate-500 truncate">{call.lead.phone}</p>
                       </div>
 
                       {/* Right side: badge + time */}
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <StatusBadge status={lead.status} />
-                        <span className="text-[10px] text-slate-400">{timeAgo(lead.updated_at)}</span>
+                        <StatusBadge status={call.status as import('@/lib/types').LeadStatus} />
+                        <span className="text-[10px] text-slate-400">{timeAgo(call.called_at)}</span>
                       </div>
                     </button>
                   </li>
@@ -441,8 +462,8 @@ export default function CallHistoryPage() {
 
       {/* ── Right column ─────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        {selectedLead ? (
-          <DetailPanel key={selectedLead.id} lead={selectedLead} />
+        {selectedCall ? (
+          <DetailPanel key={selectedCall.id} call={selectedCall} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
             <PhoneIcon />

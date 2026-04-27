@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddLeadModal } from '@/components/AddLeadModal'
 import { IconDots } from '@/components/IconDots'
 import { StatusBadge } from '@/components/StatusBadge'
-import { SummaryModal } from '@/components/SummaryModal'
 import type { Lead } from '@/lib/types'
 
 const POLL_INTERVAL = 10_000
@@ -53,7 +52,6 @@ export default function LeadInventoryPage() {
   const [callingIds, setCallingIds] = useState<Set<string>>(new Set())
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set())
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [summaryLead, setSummaryLead] = useState<Lead | null>(null)
   const [search, setSearch] = useState('')
   const [automating, setAutomating] = useState<{ current: number; total: number } | null>(null)
   const toastCounter = useRef(0)
@@ -191,15 +189,6 @@ export default function LeadInventoryPage() {
       addToast('Failed to delete lead', 'error')
       fetchLeads(true) // restore
     }
-  }
-
-  function handleLeadUpdated(leadId: string, patch: Partial<Lead>) {
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)))
-    prevLeadsRef.current = Object.fromEntries(
-      Object.entries(prevLeadsRef.current).map(([k, v]) =>
-        k === leadId ? [k, { ...v, ...patch }] : [k, v]
-      )
-    )
   }
 
   function handleLeadAdded(lead: Lead) {
@@ -450,17 +439,6 @@ export default function LeadInventoryPage() {
       </div>
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}
-      {summaryLead && (
-        <SummaryModal
-          lead={summaryLead}
-          onClose={() => setSummaryLead(null)}
-          onSaved={(id, s) => {
-            handleLeadUpdated(id, { call_summary: s })
-            setSummaryLead(null)
-          }}
-        />
-      )}
-
       {showAddModal && (
         <AddLeadModal
           onClose={() => setShowAddModal(false)}

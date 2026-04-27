@@ -84,6 +84,23 @@ export async function POST(req: NextRequest) {
     const rawScore = extracted.lead_score ?? body.lead_score ?? dataBlock?.lead_score
     const leadScore = rawScore != null ? parseInt(String(rawScore), 10) : null
 
+    const telephonyData = body.telephony_data as Record<string, unknown> | undefined
+    const recordingUrl =
+      (telephonyData?.recording_url as string | undefined) ||
+      (body.recording_url as string | undefined) ||
+      (dataBlock?.recording_url as string | undefined) ||
+      null
+
+    console.log('[webhook] extracted:', {
+      callId,
+      rawOutcome,
+      outcome,
+      recordingUrl,
+      telephonyData,
+      extractedKeys: Object.keys(extracted),
+      topLevelKeys: Object.keys(body),
+    })
+
     const update: Record<string, unknown> = {
       call_outcome: rawOutcome ?? null,
       possession_preference:
@@ -94,13 +111,13 @@ export async function POST(req: NextRequest) {
       lead_score: isNaN(leadScore as number) ? null : leadScore,
     }
 
-    if (outcome) {
-      update.status = outcome
-    }
+    // Always write status — fall back to 'completed' so the sync doesn't re-process this call
+    update.status = outcome ?? 'completed'
 
     // Update the call record
     await supabase.from('calls').update({
       call_outcome: rawOutcome ?? null,
+      recording_url: recordingUrl,
       summary:
         (extracted.call_summary as string | undefined) ??
         (body.call_summary as string | undefined) ??

@@ -25,18 +25,39 @@ function mapStatus(bolnaStatus: string, extracted: Record<string, unknown> | nul
 export async function GET() {
   const supabase = createServerClient()
 
-  // Find all in-progress calls
+  // Find all leads still marked 'calling' — covers both:
+  // (a) calls still in-progress (webhook hasn't fired)
+  // (b) calls where webhook updated calls.status but failed to update leads.status
+  const { data: stuckLeads } = await supabase
+    .from('leads')
+    .select('id')
+    .eq('status', 'calling')
+
+  if (!stuckLeads?.length) return NextResponse.json({ synced: 0 })
+
+  const stuckLeadIds = stuckLeads.map((l) => l.id)
+
+  // Get the most recent call per stuck lead (to avoid re-processing old calls)
   const { data: activeCalls } = await supabase
     .from('calls')
     .select('*, lead:leads(*)')
-    .eq('status', 'calling')
+    .in('lead_id', stuckLeadIds)
     .not('execution_id', 'is', null)
+    .order('called_at', { ascending: false })
 
   if (!activeCalls?.length) return NextResponse.json({ synced: 0 })
 
+  // Deduplicate: keep only the latest call per lead (array is already sorted desc by called_at)
+  const seenLeads = new Set<string>()
+  const callsToSync = activeCalls.filter((c) => {
+    if (seenLeads.has(c.lead_id)) return false
+    seenLeads.add(c.lead_id)
+    return true
+  })
+
   let synced = 0
 
-  for (const call of activeCalls) {
+  for (const call of callsToSync) {
     try {
       const execution = await getExecution(call.execution_id)
       if (!TERMINAL.has(execution.status)) continue
@@ -44,10 +65,15 @@ export async function GET() {
       const extracted = execution.extracted_data ?? {}
       const status = mapStatus(execution.status, execution.extracted_data)
 
+      const recordingUrl =
+        execution.telephony_data?.recording_url ??
+        execution.recording_url ??
+        null
+
       // Update the call record
       await supabase.from('calls').update({
         summary: execution.transcript ?? null,
-        recording_url: execution.recording_url ?? null,
+        recording_url: recordingUrl,
         call_outcome: (extracted.call_outcome as string | undefined) ?? null,
         status,
       }).eq('id', call.id)
