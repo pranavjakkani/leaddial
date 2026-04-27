@@ -53,15 +53,17 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
-    const { data: lead, error: fetchError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('bolna_call_id', callId)
+    // NEW — find the call record first
+    const { data: call, error: callFetchError } = await supabase
+      .from('calls')
+      .select('*, lead:leads(*)')
+      .eq('execution_id', callId)
       .single()
 
-    if (fetchError || !lead) {
+    if (callFetchError || !call) {
       return NextResponse.json({ received: true }, { status: 200 })
     }
+    const lead = call.lead
 
     // Extract data from both payload shapes
     const dataBlock = body.data as Record<string, unknown> | undefined
@@ -84,11 +86,6 @@ export async function POST(req: NextRequest) {
 
     const update: Record<string, unknown> = {
       call_outcome: rawOutcome ?? null,
-      call_summary:
-        (extracted.call_summary as string | undefined) ??
-        (body.call_summary as string | undefined) ??
-        (dataBlock?.call_summary as string | undefined) ??
-        null,
       possession_preference:
         (extracted.possession_preference as string | undefined) ?? null,
       confirmed_bhk: (extracted.confirmed_bhk as string | undefined) ?? null,
@@ -101,10 +98,22 @@ export async function POST(req: NextRequest) {
       update.status = outcome
     }
 
+    // Update the call record
+    await supabase.from('calls').update({
+      call_outcome: rawOutcome ?? null,
+      summary:
+        (extracted.call_summary as string | undefined) ??
+        (body.call_summary as string | undefined) ??
+        (dataBlock?.call_summary as string | undefined) ??
+        null,
+      status: outcome ?? 'completed',
+    }).eq('id', call.id)
+
+    // Update the lead
     const { data: updatedLead, error: updateError } = await supabase
       .from('leads')
       .update(update)
-      .eq('bolna_call_id', callId)
+      .eq('id', lead.id)
       .select()
       .single()
 
