@@ -20,12 +20,21 @@ export interface Lead {
   budget_range: string | null
   visit_slot: string | null
   call_outcome: string | null
-  call_summary: string | null
   lead_score: number | null
-  bolna_call_id: string | null
-  recording_url: string | null
   created_at: string
   updated_at: string
+}
+
+export interface Call {
+  id: string
+  lead_id: string
+  execution_id: string | null
+  summary: string | null
+  recording_url: string | null
+  call_outcome: string | null
+  status: string
+  called_at: string
+  created_at: string
 }
 
 export interface Property {
