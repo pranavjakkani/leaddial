@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
+import Sidebar from '@/components/Sidebar'
+import TopHeader from '@/components/TopHeader'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -28,7 +30,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable} h-full`}>
       <body className="min-h-full bg-[#f8f9ff] font-[var(--font-inter)] antialiased">
-        {children}
+        {/* Fixed sidebar */}
+        <Sidebar />
+        {/* Fixed top header (offset by sidebar width) */}
+        <TopHeader />
+        {/* Main content area: offset from sidebar (ml-64) and header (mt-16) */}
+        <main className="ml-64 mt-16 min-h-screen bg-[#f8f9ff]">
+          {children}
+        </main>
       </body>
     </html>
   )
