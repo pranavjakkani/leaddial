@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Property } from '@/lib/types'
 
 const CONFIG_OPTIONS = ['1 RK', '1 BHK', '2 BHK', '3 BHK', '4 BHK', 'Shop']
@@ -200,22 +200,34 @@ export default function YourPropertiesPage() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500)
   }
 
-  const fetchProperties = useCallback(async () => {
-    try {
-      const res = await fetch('/api/properties')
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data: Property[] = await res.json()
-      setProperties(data)
-    } catch {
-      addToast('Failed to load properties', 'error')
-    } finally {
-      setIsLoading(false)
+  useEffect(() => {
+    let isActive = true
+
+    async function loadProperties() {
+      try {
+        const res = await fetch('/api/properties')
+        if (!res.ok) throw new Error('Failed to fetch')
+        const data: Property[] = await res.json()
+        if (isActive) {
+          setProperties(data)
+        }
+      } catch {
+        if (isActive) {
+          addToast('Failed to load properties', 'error')
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadProperties()
+
+    return () => {
+      isActive = false
     }
   }, [])
-
-  useEffect(() => {
-    fetchProperties()
-  }, [fetchProperties])
 
   function toggleConfig(cfg: string) {
     setForm((f) => ({
@@ -231,6 +243,8 @@ export default function YourPropertiesPage() {
       addToast('Property name is required', 'error')
       return
     }
+
+    const propertyName = form.name.trim()
     const allConfigs = [
       ...form.configurations,
       ...(form.customConfig.trim() ? [form.customConfig.trim()] : []),
@@ -244,7 +258,7 @@ export default function YourPropertiesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name.trim(),
+          name: propertyName,
           location: form.location.trim() || null,
           configurations: allConfigs,
           area_min: form.area ? parseInt(form.area) : null,
@@ -255,13 +269,18 @@ export default function YourPropertiesPage() {
           status: 'pending',
         }),
       })
-      if (!res.ok) throw new Error('Failed to add')
+
+      if (!res.ok) {
+        const errorPayload = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorPayload?.error || 'Failed to add property')
+      }
+
       const newProp: Property = await res.json()
       setProperties((prev) => [newProp, ...prev])
-      addToast(`${form.name} added`)
+      addToast(`${propertyName} added`)
       setForm({ name: '', location: '', configurations: [], customConfig: '', area: '', description: '' })
-    } catch {
-      addToast('Failed to add property', 'error')
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to add property', 'error')
     }
   }
 

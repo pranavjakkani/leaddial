@@ -38,6 +38,10 @@ export interface Property {
   description: string | null
   listing_type: string   // 'Residential' | 'Commercial' | 'Premium Listing'
   status: string         // 'pending' | 'confirmed' | 'follow_up'
+  bolna_rag_id: string | null
+  bolna_knowledge_status: 'processing' | 'processed' | 'error' | null
+  bolna_knowledge_file_name: string | null
+  bolna_knowledge_source_type: 'pdf' | 'url' | null
   created_at: string
   updated_at: string
 }
