@@ -55,8 +55,10 @@ export default function LeadInventoryPage() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [summaryLead, setSummaryLead] = useState<Lead | null>(null)
   const [search, setSearch] = useState('')
+  const [automating, setAutomating] = useState<{ current: number; total: number } | null>(null)
   const toastCounter = useRef(0)
   const prevLeadsRef = useRef<Record<string, Lead>>({})
+  const autoQueueRef = useRef<string[]>([])
 
   function addToast(message: string, type: Toast['type'] = 'success') {
     const id = ++toastCounter.current
@@ -87,6 +89,29 @@ export default function LeadInventoryPage() {
             return next
           })
         }, FLASH_DURATION)
+      }
+
+      // Advance auto-call queue when the current lead's call ends
+      const queue = autoQueueRef.current
+      if (queue.length > 0) {
+        const currentId = queue[0]
+        const justLeft = changed.find(
+          (id) => id === currentId && prev[id]?.status === 'calling'
+        )
+        if (justLeft) {
+          queue.shift()
+          if (queue.length > 0) {
+            const total = queue.length + (automating?.total ?? queue.length) - queue.length
+            setAutomating((a) => a ? { ...a, current: a.total - queue.length } : null)
+            // Trigger next — use setTimeout to let state settle first
+            setTimeout(() => handleCall(queue[0]), 0)
+          } else {
+            setAutomating((a) => {
+              if (a) addToast(`All ${a.total} leads called`)
+              return null
+            })
+          }
+        }
       }
 
       // Update prev map
@@ -142,15 +167,16 @@ export default function LeadInventoryPage() {
     }
   }
 
-  async function handleCallAllPending() {
+  function handleCallAllPending() {
     const pending = leads.filter((l) => l.status === 'pending')
     if (pending.length === 0) {
       addToast('No pending leads to call', 'error')
       return
     }
-    for (const lead of pending) {
-      await handleCall(lead.id)
-    }
+    // Load queue — first ID gets triggered immediately, rest wait for poll to advance
+    autoQueueRef.current = pending.map((l) => l.id)
+    setAutomating({ current: 1, total: pending.length })
+    handleCall(pending[0].id)
   }
 
   async function handleDelete(leadId: string) {
@@ -214,9 +240,12 @@ export default function LeadInventoryPage() {
           </button> */}
           <button
             onClick={handleCallAllPending}
-            className="bg-[#fe8438] text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:opacity-90 shadow-sm"
+            disabled={automating !== null}
+            className="bg-[#fe8438] text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:opacity-90 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            ⚡ Automate All
+            {automating
+              ? `Calling ${automating.current} / ${automating.total}…`
+              : '⚡ Automate All'}
           </button>
           <button
             onClick={() => setShowAddModal(true)}
