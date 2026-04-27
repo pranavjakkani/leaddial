@@ -23,6 +23,7 @@ export interface Lead {
   call_summary: string | null
   lead_score: number | null
   bolna_call_id: string | null
+  recording_url: string | null
   created_at: string
   updated_at: string
 }

@@ -65,8 +65,84 @@ function parseTranscript(summary: string | null): TranscriptLine[] {
     .filter((l) => l.text.length > 0)
 }
 
+function AudioPlayer({ url }: { url: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  function formatTime(sec: number) {
+    if (!isFinite(sec)) return '0:00'
+    const m = Math.floor(sec / 60)
+    const s = Math.floor(sec % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current
+    if (!audio) return
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+    } else {
+      audio.play().catch(() => {})
+      setIsPlaying(true)
+    }
+  }
+
+  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const t = Number(e.target.value)
+    setCurrentTime(t)
+    if (audioRef.current) audioRef.current.currentTime = t
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+      <audio
+        ref={audioRef}
+        src={url}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onEnded={() => setIsPlaying(false)}
+      />
+      <div className="flex items-center gap-4">
+        <button
+          onClick={togglePlay}
+          className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-container transition-colors shrink-0"
+        >
+          {isPlaying ? (
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <div className="flex-1 space-y-1">
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1.5 rounded-full accent-secondary-container cursor-pointer"
+          />
+          <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-slate-400 text-center">Call recording · Bolna AI</p>
+    </div>
+  )
+}
+
 function DetailPanel({ lead }: { lead: Lead }) {
-  const [activeTab, setActiveTab] = useState<'transcript' | 'details'>('transcript')
+  const [activeTab, setActiveTab] = useState<'transcript' | 'details' | 'recording'>('transcript')
   const transcriptLines = parseTranscript(lead.call_summary)
 
   const detailFields: { label: string; value: string | number | null }[] = [
@@ -134,17 +210,17 @@ function DetailPanel({ lead }: { lead: Lead }) {
       {/* Tabs */}
       <div className="border-b border-slate-200 bg-white shrink-0">
         <div className="flex px-6">
-          {(['transcript', 'details'] as const).map((tab) => (
+          {(['transcript', 'details', 'recording'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`py-3 px-1 mr-6 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
                 activeTab === tab
-                  ? 'border-orange-500 text-[#003441] font-semibold'
-                  : 'border-transparent text-slate-500 hover:text-[#003441]'
+                  ? 'border-orange-500 text-primary font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-primary'
               }`}
             >
-              {tab === 'transcript' ? 'Transcript' : 'Lead Details'}
+              {tab === 'transcript' ? 'Transcript' : tab === 'details' ? 'Lead Details' : 'Recording'}
             </button>
           ))}
         </div>
@@ -185,7 +261,7 @@ function DetailPanel({ lead }: { lead: Lead }) {
               })
             )}
           </div>
-        ) : (
+        ) : activeTab === 'details' ? (
           <div className="px-6 py-5">
             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
               {detailFields.map(({ label, value }) => (
@@ -193,12 +269,26 @@ function DetailPanel({ lead }: { lead: Lead }) {
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-0.5">
                     {label}
                   </p>
-                  <p className="text-sm text-[#003441] font-medium">
+                  <p className="text-sm text-primary font-medium">
                     {value !== null && value !== undefined && value !== '' ? String(value) : '—'}
                   </p>
                 </div>
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="px-6 py-6">
+            {lead.recording_url ? (
+              <AudioPlayer url={lead.recording_url} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                </svg>
+                <p className="text-sm font-medium">No recording available</p>
+                <p className="text-xs">Recording will appear here once the call is synced</p>
+              </div>
+            )}
           </div>
         )}
       </div>
