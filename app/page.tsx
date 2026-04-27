@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const fetchLeads = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true)
+      await fetch('/api/sync').catch(() => {})
       const res = await fetch('/api/leads')
       if (!res.ok) throw new Error('Failed to fetch')
       const data: Lead[] = await res.json()
