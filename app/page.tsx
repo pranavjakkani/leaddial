@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddLeadModal } from '@/components/AddLeadModal'
+import { IconDots } from '@/components/IconDots'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SummaryModal } from '@/components/SummaryModal'
 import type { Lead } from '@/lib/types'
@@ -41,14 +42,14 @@ function IconCalendarCheck() {
   )
 }
 
-function IconSpinner() {
+function IconPhoneCall() {
   return (
-    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
     </svg>
   )
 }
+
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [callingIds, setCallingIds] = useState<Set<string>>(new Set())
+  const [, setCallingIds] = useState<Set<string>>(new Set())
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set())
   const [toasts, setToasts] = useState<Toast[]>([])
   const [summaryLead, setSummaryLead] = useState<Lead | null>(null)
@@ -147,30 +148,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleCallAllPending() {
-    const pending = leads.filter((l) => l.status === 'pending')
-    if (pending.length === 0) {
-      addToast('No pending leads to call', 'error')
-      return
-    }
-    for (const lead of pending) {
-      await handleCall(lead.id)
-    }
-  }
-
-  async function handleDelete(leadId: string) {
-    // Optimistic removal
-    setLeads((prev) => prev.filter((l) => l.id !== leadId))
-
-    try {
-      const res = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Delete failed')
-      addToast('Lead deleted')
-    } catch {
-      addToast('Failed to delete lead', 'error')
-      fetchLeads(true) // restore
-    }
-  }
 
   function handleLeadUpdated(leadId: string, patch: Partial<Lead>) {
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)))
@@ -188,7 +165,6 @@ export default function DashboardPage() {
   }
 
   // Derived counts
-  const pendingCount = leads.filter((l) => l.status === 'pending').length
   const calledCount = leads.filter((l) => l.bolna_call_id !== null).length
   const visitConfirmedCount = leads.filter((l) => l.status === 'visit_confirmed').length
 
@@ -265,117 +241,83 @@ export default function DashboardPage() {
         {/* Section header */}
         <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-lg font-semibold text-primary">Recent Leads</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Real-time leads requiring immediate attention</p>
+            <h2 className="text-lg font-semibold text-primary">Recent Hot Leads</h2>
+            {/* <p className="text-sm text-slate-500 mt-0.5">Real-time leads requiring immediate attention</p> */}
           </div>
-          <div className="flex items-center gap-2">
-            {pendingCount > 0 && (
-              <button
-                onClick={handleCallAllPending}
-                className="border border-slate-200 text-slate-600 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                Call All Pending ({pendingCount})
-              </button>
-            )}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-secondary-container text-white font-semibold text-sm px-4 py-1.5 rounded-lg hover:bg-orange-500 transition-colors"
-            >
-              + Add Lead
-            </button>
-          </div>
+          {/* <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-secondary-container text-white font-semibold text-sm px-4 py-1.5 rounded-lg hover:bg-orange-500 transition-colors"
+          >
+            + Add Lead
+          </button> */}
         </div>
 
-        {/* Lead list */}
-        {isLoading ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Loading leads…</div>
-        ) : leads.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-sm">No leads yet. Add your first lead!</div>
-        ) : (
-          <ul>
-            {leads.map((lead) => {
-              const isCalling = callingIds.has(lead.id)
-              const isFlashing = flashingIds.has(lead.id)
-              const initials = lead.first_name.slice(0, 2).toUpperCase()
-              const summary = lead.call_summary
-                ? lead.call_summary.length > 80
-                  ? lead.call_summary.slice(0, 80) + '…'
-                  : lead.call_summary
-                : null
+        {/* Lead list — visit_confirmed only */}
+        {(() => {
+          const hotLeads = leads.filter((l) => l.status === 'visit_confirmed')
+          if (isLoading) return <div className="p-8 text-center text-slate-400 text-sm">Loading…</div>
+          if (hotLeads.length === 0) return <div className="p-8 text-center text-slate-400 text-sm">No confirmed visits yet.</div>
+          return (
+            <ul>
+              {hotLeads.map((lead) => {
+                const isFlashing = flashingIds.has(lead.id)
+                const initials = lead.first_name.slice(0, 2).toUpperCase()
+                const summary = lead.call_summary
+                  ? lead.call_summary.length > 80
+                    ? lead.call_summary.slice(0, 80) + '…'
+                    : lead.call_summary
+                  : null
 
-              return (
-                <li
-                  key={lead.id}
-                  className={`p-5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
-                    isFlashing ? 'bg-amber-50' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-5">
+                return (
+                  <li
+                    key={lead.id}
+                    className={`p-5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${isFlashing ? 'bg-amber-50' : ''}`}
+                  >
+                    <div className="flex items-start gap-5">
 
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center font-bold text-base text-primary shrink-0">
-                      {initials}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Row 1: name + status */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-base font-bold text-primary">{lead.first_name}</span>
-                        <StatusBadge status={lead.status} />
+                      {/* Avatar */}
+                      <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center font-bold text-base text-primary shrink-0">
+                        {initials}
                       </div>
-                      {/* Row 2: meta info */}
-                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                        <span className="text-sm text-slate-500">{lead.source}</span>
-                        <span className="text-slate-300">·</span>
-                        <span className="text-sm text-slate-500">{lead.bhk_type}</span>
-                        <span className="text-slate-300">·</span>
-                        <span className="text-sm text-slate-500">{lead.phone}</span>
-                      </div>
-                      {/* Row 3: call summary snippet */}
-                      {summary && (
-                        <button
-                          onClick={() => setSummaryLead(lead)}
-                          className="mt-1 text-xs text-slate-400 hover:text-slate-600 text-left transition-colors truncate max-w-full"
-                          title="Click to view full summary"
-                        >
-                          {summary}
-                        </button>
-                      )}
-                    </div>
 
-                    {/* Actions */}
-                    <div className="self-center flex items-center gap-1 shrink-0">
-                      {lead.status !== 'calling' && (
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-base font-bold text-primary">{lead.first_name}</span>
+                          <StatusBadge status={lead.status} />
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          <span className="text-sm text-slate-500">{lead.source}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-sm text-slate-500">{lead.bhk_type}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-sm text-slate-500">{lead.phone}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions — icon buttons */}
+                      <div className="self-center flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => handleCall(lead.id)}
-                          disabled={isCalling}
-                          className="inline-flex items-center gap-1.5 bg-[#F59E0B] text-[#0F172A] px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 text-slate-400 hover:text-primary transition-colors rounded-lg hover:bg-slate-100"
+                          title="Call lead"
                         >
-                          {isCalling ? (
-                            <>
-                              <IconSpinner />
-                              Calling
-                            </>
-                          ) : (
-                            'Call'
-                          )}
+                          <IconPhoneCall />
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(lead.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors rounded-lg hover:bg-rose-50"
-                        title="Delete lead"
-                      >
-                        ✕
-                      </button>
+                        <button
+                          className="p-2 text-slate-400 hover:text-primary transition-colors rounded-lg hover:bg-slate-100"
+                          title="More options"
+                        >
+                          <IconDots />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
+                  </li>
+                )
+              })}
+            </ul>
+          )
+        })()}
       </div>
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}

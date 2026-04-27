@@ -2,12 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AddLeadModal } from '@/components/AddLeadModal'
+import { IconDots } from '@/components/IconDots'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SummaryModal } from '@/components/SummaryModal'
 import type { Lead } from '@/lib/types'
 
-const POLL_INTERVAL = 10_000 // 10 seconds
-const FLASH_DURATION = 2_000  // 2 seconds
+const POLL_INTERVAL = 10_000
+const FLASH_DURATION = 2_000
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'yesterday'
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 interface Toast {
   id: number
@@ -193,12 +206,12 @@ export default function LeadInventoryPage() {
           <p className="text-sm text-slate-500 mt-0.5">Manage and track your real estate prospects.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          {/* <button
             disabled
             className="bg-white border border-slate-200 text-[#003441] px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:bg-slate-50 shadow-sm opacity-60 cursor-not-allowed"
           >
             ↑ Import Leads
-          </button>
+          </button> */}
           <button
             onClick={handleCallAllPending}
             className="bg-[#fe8438] text-white px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:opacity-90 shadow-sm"
@@ -347,7 +360,7 @@ export default function LeadInventoryPage() {
 
                     {/* Last Call */}
                     <td className="px-6 py-4">
-                      {truncatedSummary ? (
+                      {/* {truncatedSummary ? (
                         <button
                           onClick={() => setSummaryLead(lead)}
                           className="text-sm text-slate-500 hover:text-[#003441] text-left transition-colors max-w-[180px] truncate block"
@@ -355,11 +368,11 @@ export default function LeadInventoryPage() {
                         >
                           {truncatedSummary}
                         </button>
-                      ) : (
+                      ) : ( */}
                         <span className="text-sm text-slate-400">
-                          {new Date(lead.updated_at).toLocaleDateString()}
+                          {timeAgo(lead.updated_at)}
                         </span>
-                      )}
+                      {/* )} */}
                     </td>
 
                     {/* Actions */}
@@ -384,12 +397,18 @@ export default function LeadInventoryPage() {
                             <>🤖 AI Call</>
                           )}
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => handleDelete(lead.id)}
                           className="text-slate-400 hover:text-rose-500 ml-2 text-sm transition-colors"
                           title="Delete lead"
                         >
                           ✕
+                        </button> */}
+                         <button
+                          className="p-2 text-slate-400 hover:text-primary transition-colors rounded-lg hover:bg-slate-100"
+                          title="More options"
+                        >
+                          <IconDots />
                         </button>
                       </div>
                     </td>
