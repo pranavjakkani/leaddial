@@ -79,6 +79,8 @@ function IconPlus() {
 
 // ── Status badge ─────────────────────────────────────────────────────────────
 
+// Kept for quick reuse while the badge display is temporarily hidden in the card.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     pending: 'bg-blue-100 text-blue-700',
@@ -137,7 +139,7 @@ function PropertyCard({
         {/* Name + status */}
         <div className="flex justify-between items-start mb-2">
           <h4 className="font-semibold text-primary">{prop.name}</h4>
-          <StatusBadge status={prop.status} />
+          {/* <StatusBadge status={prop.status} /> */}
         </div>
 
         {/* Location */}
@@ -188,7 +190,9 @@ export default function YourPropertiesPage() {
     location: '',
     configurations: [] as string[],
     customConfig: '',
-    area: '',
+    areaMin: '',
+    areaMax: '',
+    priceStarting: '',
     description: '',
   })
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -261,9 +265,9 @@ export default function YourPropertiesPage() {
           name: propertyName,
           location: form.location.trim() || null,
           configurations: allConfigs,
-          area_min: form.area ? parseInt(form.area) : null,
-          area_max: null,
-          price_starting: null,
+          area_min: form.areaMin ? parseInt(form.areaMin) : null,
+          area_max: form.areaMax ? parseInt(form.areaMax) : null,
+          price_starting: form.priceStarting.trim() || null,
           description: form.description.trim() || null,
           listing_type,
           status: 'pending',
@@ -278,7 +282,16 @@ export default function YourPropertiesPage() {
       const newProp: Property = await res.json()
       setProperties((prev) => [newProp, ...prev])
       addToast(`${propertyName} added`)
-      setForm({ name: '', location: '', configurations: [], customConfig: '', area: '', description: '' })
+      setForm({
+        name: '',
+        location: '',
+        configurations: [],
+        customConfig: '',
+        areaMin: '',
+        areaMax: '',
+        priceStarting: '',
+        description: '',
+      })
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to add property', 'error')
     }
@@ -389,19 +402,40 @@ export default function YourPropertiesPage() {
                 />
               </div>
 
-              {/* 4. Area */}
+              {/* 4. Area Range */}
               <div>
-                <label className={labelClass}>Area (Sq. Ft.)</label>
+                <label className={labelClass}>Area Range (Sq. Ft.)</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={form.areaMin}
+                    onChange={(e) => setForm((f) => ({ ...f, areaMin: e.target.value }))}
+                    className={inputClass}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={form.areaMax}
+                    onChange={(e) => setForm((f) => ({ ...f, areaMax: e.target.value }))}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* 5. Price Starting */}
+              <div>
+                <label className={labelClass}>Price Starting</label>
                 <input
-                  type="number"
-                  placeholder="0"
-                  value={form.area}
-                  onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
+                  type="text"
+                  placeholder="e.g. Rs. 82 Lakhs"
+                  value={form.priceStarting}
+                  onChange={(e) => setForm((f) => ({ ...f, priceStarting: e.target.value }))}
                   className={inputClass}
                 />
               </div>
 
-              {/* 5. Description */}
+              {/* 6. Description */}
               <div>
                 <label className={labelClass}>Description</label>
                 <textarea
@@ -413,7 +447,7 @@ export default function YourPropertiesPage() {
                 />
               </div>
 
-              {/* 6. Media Upload */}
+              {/* 7. Media Upload */}
               <div>
                 <label className={labelClass}>Media (Photos &amp; PDFs)</label>
                 <div
@@ -428,7 +462,7 @@ export default function YourPropertiesPage() {
                 </div>
               </div>
 
-              {/* 7. Submit */}
+              {/* 8. Submit */}
               <button
                 type="button"
                 onClick={handleAddProperty}

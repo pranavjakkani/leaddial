@@ -28,18 +28,18 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    label: 'AI Agent',
-    href: '/ai-agent',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="10" rx="2" />
-        <path d="M12 11V5" />
-        <circle cx="12" cy="4" r="1" />
-        <path d="M8 15h.01M12 15h.01M16 15h.01" />
-      </svg>
-    ),
-  },
+  // {
+  //   label: 'AI Agent',
+  //   href: '/ai-agent',
+  //   icon: (
+  //     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //       <rect x="3" y="11" width="18" height="10" rx="2" />
+  //       <path d="M12 11V5" />
+  //       <circle cx="12" cy="4" r="1" />
+  //       <path d="M8 15h.01M12 15h.01M16 15h.01" />
+  //     </svg>
+  //   ),
+  // },
   {
     label: 'Call History',
     href: '/call-history',
@@ -141,7 +141,7 @@ export default function Sidebar() {
       {/* Bottom section */}
       <div className="px-2 pb-4 flex flex-col gap-2 border-t border-slate-200 pt-3">
         {/* New Lead button */}
-        <Link
+        {/* <Link
           href="/leads/new"
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-white text-sm font-semibold transition-opacity hover:opacity-90"
           style={{ backgroundColor: '#fe8438' }}
@@ -151,7 +151,7 @@ export default function Sidebar() {
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           New Lead
-        </Link>
+        </Link> */}
 
         {/* Settings & Support */}
         <ul className="flex flex-col gap-0.5">
