@@ -13,7 +13,6 @@ interface CallWithLead {
   summary: string | null
   recording_url: string | null
   call_outcome: string | null
-  status: string
   called_at: string
   created_at: string
   lead: {
@@ -23,7 +22,7 @@ interface CallWithLead {
     salutation: string
     source: string
     bhk_type: string
-    status: string
+    status: string        // LeadStatus — business outcome lives here only
     lead_score: number | null
     possession_preference: string | null
     confirmed_bhk: string | null
@@ -200,7 +199,7 @@ function DetailPanel({ call }: { call: CallWithLead }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-xl font-bold text-[#003441]">{call.lead.first_name}</h2>
-              <StatusBadge status={call.status as import('@/lib/types').LeadStatus} />
+              <StatusBadge status={call.lead.status as import('@/lib/types').LeadStatus} />
             </div>
             <p className="text-sm text-slate-500 mt-0.5">{call.lead.phone}</p>
           </div>
@@ -360,10 +359,10 @@ export default function CallHistoryPage() {
 
   // Stats derived from calls array
   const totalCalls = calls.length
-  const confirmed = calls.filter((c) => c.status === 'visit_confirmed').length
-  const notInterested = calls.filter((c) => c.status === 'not_interested').length
+  const confirmed = calls.filter((c) => c.lead.status === 'visit_confirmed').length
+  const notInterested = calls.filter((c) => c.lead.status === 'not_interested').length
   const followUp = calls.filter(
-    (c) => c.status === 'follow_up' || c.status === 'callback_requested'
+    (c) => c.lead.status === 'follow_up' || c.lead.status === 'callback_requested'
   ).length
 
   const stats = [
@@ -448,7 +447,7 @@ export default function CallHistoryPage() {
 
                       {/* Right side: badge + time */}
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <StatusBadge status={call.status as import('@/lib/types').LeadStatus} />
+                        <StatusBadge status={call.lead.status as import('@/lib/types').LeadStatus} />
                         <span className="text-[10px] text-slate-400">{timeAgo(call.called_at)}</span>
                       </div>
                     </button>

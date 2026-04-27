@@ -14,6 +14,26 @@ function normaliseOutcome(raw: string | undefined | null): LeadStatus | null {
   return null
 }
 
+// Bolna wraps each extracted field in a confidence envelope:
+// { field: { field: { subjective: "value", objective: "value", ... } } }
+// This unwraps it to a plain string.
+function unwrap(val: unknown, key: string): string | null {
+  if (val === null || val === undefined) return null
+  if (typeof val === 'string') return val || null
+  if (typeof val === 'number') return String(val)
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>
+    const inner = obj[key] ?? obj
+    if (inner && typeof inner === 'object') {
+      const envelope = inner as Record<string, unknown>
+      const v = envelope.subjective ?? envelope.objective
+      if (typeof v === 'string') return v || null
+      if (typeof v === 'number') return String(v)
+    }
+  }
+  return null
+}
+
 function isCompleted(body: Record<string, unknown>): boolean {
   const data = body.data as Record<string, unknown> | undefined
   return (
@@ -75,13 +95,14 @@ export async function POST(req: NextRequest) {
       {}
 
     const rawOutcome =
-      (extracted.call_outcome as string | undefined) ||
+      unwrap(extracted.call_outcome, 'call_outcome') ||
       (body.call_outcome as string | undefined) ||
-      (dataBlock?.call_outcome as string | undefined)
+      (dataBlock?.call_outcome as string | undefined) ||
+      null
 
     const outcome = normaliseOutcome(rawOutcome)
 
-    const rawScore = extracted.lead_score ?? body.lead_score ?? dataBlock?.lead_score
+    const rawScore = unwrap(extracted.lead_score, 'lead_score') ?? body.lead_score ?? dataBlock?.lead_score
     const leadScore = rawScore != null ? parseInt(String(rawScore), 10) : null
 
     const telephonyData = body.telephony_data as Record<string, unknown> | undefined
@@ -103,18 +124,17 @@ export async function POST(req: NextRequest) {
 
     const update: Record<string, unknown> = {
       call_outcome: rawOutcome ?? null,
-      possession_preference:
-        (extracted.possession_preference as string | undefined) ?? null,
-      confirmed_bhk: (extracted.confirmed_bhk as string | undefined) ?? null,
-      budget_range: (extracted.budget_range as string | undefined) ?? null,
-      visit_slot: (extracted.visit_slot as string | undefined) ?? null,
+      possession_preference: unwrap(extracted.possession_preference, 'possession_preference'),
+      confirmed_bhk: unwrap(extracted.confirmed_bhk, 'confirmed_bhk'),
+      budget_range: unwrap(extracted.budget_range, 'budget_range'),
+      visit_slot: unwrap(extracted.visit_slot, 'visit_slot'),
       lead_score: isNaN(leadScore as number) ? null : leadScore,
     }
 
-    // Always write status — fall back to 'completed' so the sync doesn't re-process this call
-    update.status = outcome ?? 'completed'
+    // Lead status: use outcome if known, otherwise follow_up (completed is not a valid LeadStatus)
+    update.status = outcome ?? 'follow_up'
 
-    // Update the call record
+    // Update the call record — calls.status is only a technical marker (calling → completed)
     await supabase.from('calls').update({
       call_outcome: rawOutcome ?? null,
       recording_url: recordingUrl,
@@ -122,8 +142,9 @@ export async function POST(req: NextRequest) {
         (extracted.call_summary as string | undefined) ??
         (body.call_summary as string | undefined) ??
         (dataBlock?.call_summary as string | undefined) ??
+        (body.transcript as string | undefined) ??
         null,
-      status: outcome ?? 'completed',
+      status: 'completed',
     }).eq('id', call.id)
 
     // Update the lead

@@ -4,16 +4,32 @@ import { getExecution } from '@/lib/bolna'
 import { sendVisitConfirmedEmail } from '@/lib/resend'
 import type { LeadStatus } from '@/lib/types'
 
+function unwrap(val: unknown, key: string): string | null {
+  if (val === null || val === undefined) return null
+  if (typeof val === 'string') return val || null
+  if (typeof val === 'number') return String(val)
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>
+    const inner = obj[key] ?? obj
+    if (inner && typeof inner === 'object') {
+      const envelope = inner as Record<string, unknown>
+      const v = envelope.subjective ?? envelope.objective
+      if (typeof v === 'string') return v || null
+      if (typeof v === 'number') return String(v)
+    }
+  }
+  return null
+}
+
 const TERMINAL = new Set([
-  'completed', 'call-disconnected', 'no-answer', 'busy',
-  'canceled', 'failed', 'stopped', 'error', 'balance-low',
+  'completed', 'no-answer', 'busy', 'canceled', 'failed', 'stopped', 'error', 'balance-low',
 ])
 
-function mapStatus(bolnaStatus: string, extracted: Record<string, unknown> | null): LeadStatus {
+function mapStatus(bolnaStatus: string, callOutcome: string | null): LeadStatus {
   if (bolnaStatus === 'no-answer') return 'no_answer'
   if (bolnaStatus === 'busy') return 'callback_requested'
-  if (extracted) {
-    const raw = (extracted.call_outcome as string | undefined)?.toLowerCase().trim()
+  if (callOutcome) {
+    const raw = callOutcome.toLowerCase().trim()
     if (raw === 'visit_confirmed' || raw === 'confirmed') return 'visit_confirmed'
     if (raw === 'callback_requested' || raw === 'callback') return 'callback_requested'
     if (raw === 'not_interested') return 'not_interested'
@@ -63,19 +79,24 @@ export async function GET() {
       if (!TERMINAL.has(execution.status)) continue
 
       const extracted = execution.extracted_data ?? {}
-      const status = mapStatus(execution.status, execution.extracted_data)
+      const rawOutcome = unwrap(extracted.call_outcome, 'call_outcome')
+      const status = mapStatus(execution.status, rawOutcome)
 
       const recordingUrl =
         execution.telephony_data?.recording_url ??
         execution.recording_url ??
         null
 
-      // Update the call record
+      const callOutcome = unwrap(extracted.call_outcome, 'call_outcome')
+      const rawScore = unwrap(extracted.lead_score, 'lead_score')
+      const leadScore = rawScore != null ? parseInt(rawScore, 10) : null
+
+      // Update the call record — calls.status is only a technical marker (calling → completed)
       await supabase.from('calls').update({
         summary: execution.transcript ?? null,
         recording_url: recordingUrl,
-        call_outcome: (extracted.call_outcome as string | undefined) ?? null,
-        status,
+        call_outcome: callOutcome,
+        status: 'completed',
       }).eq('id', call.id)
 
       // Update lead with latest extracted data + new status
@@ -83,12 +104,12 @@ export async function GET() {
         .from('leads')
         .update({
           status,
-          call_outcome: (extracted.call_outcome as string | undefined) ?? null,
-          lead_score: extracted.lead_score != null ? parseInt(String(extracted.lead_score), 10) : null,
-          possession_preference: (extracted.possession_preference as string | undefined) ?? null,
-          confirmed_bhk: (extracted.confirmed_bhk as string | undefined) ?? null,
-          budget_range: (extracted.budget_range as string | undefined) ?? null,
-          visit_slot: (extracted.visit_slot as string | undefined) ?? null,
+          call_outcome: callOutcome,
+          lead_score: isNaN(leadScore as number) ? null : leadScore,
+          possession_preference: unwrap(extracted.possession_preference, 'possession_preference'),
+          confirmed_bhk: unwrap(extracted.confirmed_bhk, 'confirmed_bhk'),
+          budget_range: unwrap(extracted.budget_range, 'budget_range'),
+          visit_slot: unwrap(extracted.visit_slot, 'visit_slot'),
         })
         .eq('id', call.lead_id)
         .select()

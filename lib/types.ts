@@ -32,7 +32,7 @@ export interface Call {
   summary: string | null
   recording_url: string | null
   call_outcome: string | null
-  status: string
+  status: 'calling' | 'completed'
   called_at: string
   created_at: string
 }
