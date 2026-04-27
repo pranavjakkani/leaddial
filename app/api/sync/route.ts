@@ -49,6 +49,7 @@ export async function GET() {
       const update = {
         status,
         call_summary: execution.transcript ?? null,
+        recording_url: execution.recording_url ?? null,
         call_outcome: (extracted.call_outcome as string | undefined) ?? null,
         lead_score: extracted.lead_score != null ? parseInt(String(extracted.lead_score), 10) : null,
         possession_preference: (extracted.possession_preference as string | undefined) ?? null,
