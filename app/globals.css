@@ -1,14 +1,33 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@theme {
+  /* Design system color tokens */
+  --color-primary: #003441;
+  --color-primary-container: #0f4c5c;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #87bbce;
+  --color-secondary-container: #fe8438;
+  --color-surface: #f8f9ff;
+  --color-surface-container: #e5eeff;
+  --color-on-surface: #0b1c30;
+  --color-on-background: #0b1c30;
+  --color-background: #f8f9ff;
+
+  /* Font families */
+  --font-family-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-family-jakarta: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #f8f9ff;
+  --foreground: #0b1c30;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-family: 'Inter', var(--font-plus-jakarta-sans), sans-serif;
 }
 
 @keyframes flash-row {
