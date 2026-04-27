@@ -55,6 +55,43 @@ CREATE POLICY "Service role full access" ON leads
   USING (true)
   WITH CHECK (true);
 
+CREATE TABLE IF NOT EXISTS properties (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+
+  -- Property info
+  name TEXT NOT NULL,
+  location TEXT,
+  configurations TEXT[] DEFAULT '{}'::text[],
+  area_min INTEGER,
+  area_max INTEGER,
+  price_starting TEXT,
+  description TEXT,
+  listing_type TEXT DEFAULT 'Residential',
+  status TEXT DEFAULT 'pending',
+
+  -- Bolna knowledgebase tracking
+  bolna_rag_id TEXT,
+  bolna_knowledge_status TEXT,
+  bolna_knowledge_file_name TEXT,
+  bolna_knowledge_source_type TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TRIGGER properties_updated_at
+  BEFORE UPDATE ON properties
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access properties" ON properties
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 -- Seed sample leads for demo
 INSERT INTO leads (first_name, phone, salutation, source, bhk_type, status)
 VALUES
