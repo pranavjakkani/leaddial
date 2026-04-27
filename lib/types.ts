@@ -26,3 +26,18 @@ export interface Lead {
   created_at: string
   updated_at: string
 }
+
+export interface Property {
+  id: string
+  name: string
+  location: string | null
+  configurations: string[]
+  area_min: number | null
+  area_max: number | null
+  price_starting: string | null
+  description: string | null
+  listing_type: string   // 'Residential' | 'Commercial' | 'Premium Listing'
+  status: string         // 'pending' | 'confirmed' | 'follow_up'
+  created_at: string
+  updated_at: string
+}
