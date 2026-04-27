@@ -7,11 +7,12 @@ interface LeadRowProps {
   lead: Lead
   onCall: (leadId: string) => void
   onDelete: (leadId: string) => void
+  onSummaryClick: (lead: Lead) => void
   isFlashing: boolean
   isCalling: boolean
 }
 
-export function LeadRow({ lead, onCall, onDelete, isFlashing, isCalling }: LeadRowProps) {
+export function LeadRow({ lead, onCall, onDelete, onSummaryClick, isFlashing, isCalling }: LeadRowProps) {
   const disableCall = lead.status === 'calling' || isCalling
 
   return (
@@ -51,13 +52,16 @@ export function LeadRow({ lead, onCall, onDelete, isFlashing, isCalling }: LeadR
       </td>
 
       {/* Call Summary */}
-      <td className="px-4 py-3 text-sm text-[#64748B] max-w-[200px]">
+      <td className="px-4 py-3 text-sm text-[#64748B] max-w-50">
         {lead.call_summary ? (
-          <span title={lead.call_summary} className="line-clamp-2">
+          <button
+            onClick={() => onSummaryClick(lead)}
+            className="text-left line-clamp-2 hover:text-[#0F172A] hover:underline underline-offset-2 transition-colors cursor-pointer"
+          >
             {lead.call_summary.length > 60
               ? lead.call_summary.slice(0, 60) + '…'
               : lead.call_summary}
-          </span>
+          </button>
         ) : (
           '—'
         )}

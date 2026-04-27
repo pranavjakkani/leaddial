@@ -134,6 +134,15 @@ export default function DashboardPage() {
     }
   }
 
+  function handleLeadUpdated(leadId: string, patch: Partial<Lead>) {
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)))
+    prevLeadsRef.current = Object.fromEntries(
+      Object.entries(prevLeadsRef.current).map(([k, v]) =>
+        k === leadId ? [k, { ...v, ...patch }] : [k, v]
+      )
+    )
+  }
+
   function handleLeadAdded(lead: Lead) {
     setLeads((prev) => [lead, ...prev])
     prevLeadsRef.current[lead.id] = lead
@@ -150,7 +159,7 @@ export default function DashboardPage() {
           <div>
             <span className="text-lg font-bold text-[#0F172A] tracking-tight">LeadDial</span>
             <span className="ml-2 text-sm text-[#64748B] hidden sm:inline">
-              Shree Priya Developers · Ulwe, Navi Mumbai
+              Horizon Developers · Ulwe, Navi Mumbai
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -179,6 +188,7 @@ export default function DashboardPage() {
           leads={leads}
           onCall={handleCall}
           onDelete={handleDelete}
+          onLeadUpdated={handleLeadUpdated}
           callingIds={callingIds}
           flashingIds={flashingIds}
           isLoading={isLoading}

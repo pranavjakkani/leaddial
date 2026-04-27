@@ -10,7 +10,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'LeadDial — Real Estate Voice Agent',
-  description: 'Manage real estate leads and trigger AI voice calls for Shree Priya Developers',
+  description: 'Manage real estate leads and trigger AI voice calls for Horizon Developers',
 }
 
 export default function RootLayout({

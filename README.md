@@ -1,6 +1,6 @@
 # LeadDial
 
-Real estate voice agent dashboard for Shree Priya Developers, Ulwe (Navi Mumbai).
+Real estate voice agent dashboard for Horizon Developers, Ulwe (Navi Mumbai).
 
 Built for the Bolna FSE Assignment — manages leads, triggers outbound AI voice calls via Bolna, receives post-call webhook data, and emails the site manager on visit confirmation.
 

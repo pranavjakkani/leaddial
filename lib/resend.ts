@@ -12,7 +12,7 @@ export async function sendVisitConfirmedEmail(lead: Lead): Promise<void> {
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #0F172A; margin-bottom: 8px;">Site Visit Confirmed</h2>
-          <p style="color: #64748B; margin-bottom: 24px;">A lead has confirmed a site visit at Shree Priya Developers, Ulwe.</p>
+          <p style="color: #64748B; margin-bottom: 24px;">A lead has confirmed a site visit at Horizon Developers, Ulwe.</p>
           <table style="width: 100%; border-collapse: collapse;">
             <tr><td style="padding: 8px 0; color: #64748B; font-size: 14px;">Name</td><td style="padding: 8px 0; color: #0F172A; font-weight: 600;">${lead.first_name}</td></tr>
             <tr><td style="padding: 8px 0; color: #64748B; font-size: 14px;">Phone</td><td style="padding: 8px 0; color: #0F172A;">${lead.phone}</td></tr>
