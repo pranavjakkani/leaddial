@@ -1,52 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
-
-interface Property {
-  id: string
-  name: string
-  location: string | null
-  configurations: string[]
-  area_min: number | null
-  area_max: number | null
-  price_starting: string | null
-  description: string | null
-  listing_type: string
-  status: string
-  created_at: string
-  updated_at: string
-}
-
-const MOCK_PROPERTIES: Property[] = [
-  {
-    id: 'mock-1',
-    name: 'Shree Priya Heights',
-    location: 'Ulwe, Sector 17, Navi Mumbai',
-    configurations: ['2 BHK', '3 BHK'],
-    area_min: 650,
-    area_max: 980,
-    price_starting: '₹62L',
-    description: null,
-    listing_type: 'Residential',
-    status: 'pending',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-2',
-    name: 'Priya Business Park',
-    location: 'Ulwe, Sector 20, Navi Mumbai',
-    configurations: ['Shop', '1 RK'],
-    area_min: 280,
-    area_max: 600,
-    price_starting: '₹28L',
-    description: null,
-    listing_type: 'Commercial',
-    status: 'follow_up',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-]
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Property } from '@/lib/types'
 
 const CONFIG_OPTIONS = ['1 RK', '1 BHK', '2 BHK', '3 BHK', '4 BHK', 'Shop']
 
@@ -226,7 +181,8 @@ function PropertyCard({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function YourPropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES)
+  const [properties, setProperties] = useState<Property[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [form, setForm] = useState({
     name: '',
     location: '',
@@ -244,6 +200,23 @@ export default function YourPropertiesPage() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500)
   }
 
+  const fetchProperties = useCallback(async () => {
+    try {
+      const res = await fetch('/api/properties')
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data: Property[] = await res.json()
+      setProperties(data)
+    } catch {
+      addToast('Failed to load properties', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchProperties()
+  }, [fetchProperties])
+
   function toggleConfig(cfg: string) {
     setForm((f) => ({
       ...f,
@@ -253,7 +226,7 @@ export default function YourPropertiesPage() {
     }))
   }
 
-  function handleAddProperty() {
+  async function handleAddProperty() {
     if (!form.name.trim()) {
       addToast('Property name is required', 'error')
       return
@@ -265,29 +238,46 @@ export default function YourPropertiesPage() {
     const listing_type = allConfigs.some((c) => c.toLowerCase() === 'shop')
       ? 'Commercial'
       : 'Residential'
-    const newProp: Property = {
-      id: crypto.randomUUID(),
-      name: form.name.trim(),
-      location: form.location.trim() || null,
-      configurations: allConfigs,
-      area_min: form.area ? parseInt(form.area) : null,
-      area_max: null,
-      price_starting: null,
-      description: form.description.trim() || null,
-      listing_type,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+
+    try {
+      const res = await fetch('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          location: form.location.trim() || null,
+          configurations: allConfigs,
+          area_min: form.area ? parseInt(form.area) : null,
+          area_max: null,
+          price_starting: null,
+          description: form.description.trim() || null,
+          listing_type,
+          status: 'pending',
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to add')
+      const newProp: Property = await res.json()
+      setProperties((prev) => [newProp, ...prev])
+      addToast(`${form.name} added`)
+      setForm({ name: '', location: '', configurations: [], customConfig: '', area: '', description: '' })
+    } catch {
+      addToast('Failed to add property', 'error')
     }
-    setProperties((prev) => [newProp, ...prev])
-    addToast(`${form.name} added`)
-    setForm({ name: '', location: '', configurations: [], customConfig: '', area: '', description: '' })
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     const prop = properties.find((p) => p.id === id)
+    // Optimistic removal
     setProperties((prev) => prev.filter((p) => p.id !== id))
-    if (prop) addToast(`${prop.name} removed`)
+    try {
+      const res = await fetch(`/api/properties/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      if (prop) addToast(`${prop.name} removed`)
+    } catch {
+      // Revert on failure
+      if (prop) setProperties((prev) => [prop, ...prev])
+      addToast('Failed to delete property', 'error')
+    }
   }
 
   const labelClass = 'block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2'
@@ -454,23 +444,38 @@ export default function YourPropertiesPage() {
 
           {/* Property grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {properties.map((prop) => (
-              <PropertyCard key={prop.id} prop={prop} onDelete={handleDelete} />
-            ))}
+            {isLoading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+                  <div className="h-48 bg-slate-200" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-4 bg-slate-200 rounded w-3/4" />
+                    <div className="h-3 bg-slate-200 rounded w-1/2" />
+                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                {properties.map((prop) => (
+                  <PropertyCard key={prop.id} prop={prop} onDelete={handleDelete} />
+                ))}
 
-            {/* Quick Add Listing card */}
-            <div
-              onClick={() => addToast('Quick add coming soon')}
-              className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-white hover:border-primary transition-all group min-h-50"
-            >
-              <div className="w-12 h-12 rounded-full bg-slate-200 group-hover:bg-primary transition-colors flex items-center justify-center mb-4">
-                <span className="text-slate-500 group-hover:text-white transition-colors">
-                  <IconPlus />
-                </span>
-              </div>
-              <p className="font-bold text-slate-600">Quick Add Listing</p>
-              <p className="text-xs text-slate-400 mt-1">Start a new draft project</p>
-            </div>
+                {/* Quick Add Listing card */}
+                <div
+                  onClick={() => addToast('Quick add coming soon')}
+                  className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-white hover:border-primary transition-all group min-h-50"
+                >
+                  <div className="w-12 h-12 rounded-full bg-slate-200 group-hover:bg-primary transition-colors flex items-center justify-center mb-4">
+                    <span className="text-slate-500 group-hover:text-white transition-colors">
+                      <IconPlus />
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-600">Quick Add Listing</p>
+                  <p className="text-xs text-slate-400 mt-1">Start a new draft project</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
