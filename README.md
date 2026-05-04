@@ -2,7 +2,7 @@
 
 Real estate AI voice agent dashboard for Horizon Developers, Ulwe (Navi Mumbai).
 
-Built for the Bolna FSE Assignment — manages real estate leads, triggers outbound AI voice calls via Bolna, receives post-call webhook data, stores call history, and emails the site manager when a lead confirms a site visit.
+Manages real estate leads, triggers outbound AI voice calls via Bolna, receives post-call webhook data, stores call history, and emails the site manager when a lead confirms a site visit.
 
 ## Stack
 
